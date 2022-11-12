@@ -30,12 +30,12 @@ def assignmentDiffers(yCurrent, yPrev):
     for i in range(len(yCurrent)):
         # make sure they're the same length
         if len(yCurrent[i])!=len(yPrev[i]):
-            print("length difference: "+str(i))
+            #print("length difference: "+str(i))
             return True
         # check if each item is equal
         for j in range(len(yCurrent[i])):
             if yCurrent[i][j]!=yPrev[i][j]:
-                print("value difference\ncurrent"+str(yCurrent[i][j])+"\nprevious\n"+str(yPrev[i][j]))
+                #print("value difference\ncurrent"+str(yCurrent[i][j])+"\nprevious\n"+str(yPrev[i][j]))
                 return True
     return False
 
@@ -60,18 +60,15 @@ class KMeans:
             if smallest_dist > current_dist:
                 smallest_dist = current_dist
                 smallest_index = i
-        #print(str(smallest_index)+" "+str(smallest_dist))
         return smallest_index
     
     def train(self, data):
         """ Train model based on data """
         # Initial random cluster assignment
         initial_clusters = random.sample(range(len(data)), self.k)
-        #print(initial_clusters)
+        
         for x in range(self.k):
-            #print(data.iloc[initial_clusters[x]].tolist())
             self.means.append(data.iloc[initial_clusters[x]].tolist())
-        print(self.means)
         
         # place the data's index into a 2d array.  each 1st dimention index is a cluster
         clusters = [[] for ind in range(self.k)]
@@ -80,31 +77,21 @@ class KMeans:
         itterations = 0
         while assignChange and itterations<=self.MAX_ITTERATIONS:
             itterations+=1
-            print(itterations)
-            #print("previous\n"+str(clusters))
-            #print("current\n"+str(new_clusters))
+            #print(itterations)
             
             # preform training
             for index in range(len(data)):
                 classification = self.classify(data.iloc[index])
-                #print(classification)
-                #time.sleep(.2)
                 new_clusters[classification].append(index)
                 
-            
-            #print("new\n"+str(new_clusters))
-            #print("old\n"+str(clusters))
-            
             # check if any changes occured in the clustering
             assignChange=assignmentDiffers(new_clusters,clusters)
             # update the cluster centroids to reflect the updated clusters
             if assignChange:
                 for i in range(self.k):
                     self.means[i] = centroid(data.iloc[new_clusters[i]])
-                print(self.means)
                 clusters = deepcopy(new_clusters)
                 new_clusters = [[] for ind in range(self.k)]
-        
         
 
 class DBSCAN:
@@ -264,6 +251,7 @@ def kmeans(x, k):
     # Use it like this?
     km = KMeans(k)
     km.train(x[x.columns[:-1]])
+    print(km.means)
     # can print out km.means to see the fit means
     # can call km.classify([1,2,3,4]) to get cluster index
     

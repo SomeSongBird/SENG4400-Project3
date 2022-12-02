@@ -99,118 +99,79 @@ class DBSCAN:
     def __init__(self,epsilon,minPts):
         self.epsilon = epsilon
         self.minPts = minPts
+        self.model = None
     
     def classify(self,x):
         """ Return the index of the cluster to which this point would belong, or None """
+        clusters = {}
+        justData = self.model.loc[:,self.model.columns!='cluster']
+        #print(justData)
+        #return None
+        for point in self.model.index:
+            if(dist(x,justData.iloc[point])<=self.epsilon):
+                clust = self.model.iloc[point]['cluster']
+                if(clust!=-1):
+                    try:
+                        clusters[clust]+=1
+                    except e:
+                        clusters[clust] = 1
+        if clusters!={}:
+            return max(clusters,key=clusters.get) # returns the key with the highest value
+        return -1
 
-        pass
-    
-
+    def findFirstUnassigned(self, data):
+        for dat in data.index:
+            if data["cluster"][dat]==-1:
+                return dat  # return the index of the first instance of a point without a cluster assignment
+        return None
 
     def train(self,data):
         """ Train model based on data """
 
-        corePoints = [] # Contains True or False depending if the corresponding point is a core point
-        for pt in data:
-            # count points in radius from pt
-            closePts = 0
-            for pt2 in data:
-                if pt == pt2:
-                    continue
-                dis = dist(pt,pt2)
-                if dis <= self.epsilon:
-                    closePts += 1
-            if closePts >= self.minPts:
-                corePoints.append(True)
-            else:
-                corePoints.append(False)
-    
-        clusterAssignments = [None]*len(data)
-        nextClusterIndex = 0
-        while tmp:
-
-            unassignedCorePointIndices = []
-            for pt1Index in len(data):
-                pt
-            todoList= []
-            startingPointIndex = 0
-            todoList.append(startingPointIndex)
-            clusterAssignments[startingPointIndex] = nextClusterIndex
-
-            while len(todoList) > 0:
-                for pt1 in todoList:
-                    for pt2Index in len(data):
-                        pt2 = data[pt2Index]
-                        if pt1==pt2:
-                            continue
-                        d=dist(pt1,pt2)
-                        if d <= self.epsilon:
-                            if corePoints[pt2Index] == True:
-                                todoList.append(pt2Index)
-                                clusterAssignments[pt2Index] = nextClusterIndex
-            
-            for pt1Index in len(data):
-                pt1 = data[pt1Index]
-                if clusterAssignments[pt1Index] == nextClusterIndex:
-                    for pt2Index in len(data):
-                        pt2 = data[pt2Index]
-                        if pt1==pt2:
-                            continue
-                        if clusterAssignments[pt2Index] == None and corePoints[pt2Index] == False:
-                            if dist(pt1,pt2) <= self.epsilon:
-                                clusterAssignments[pt2Index] = nextClusterIndex
-
-            for pt1Index in len(data):
-                if corePoints[pt1Index] == True and clusterAssignments[pt1Index] == None:
-                    anyCorePointsRemainingUnassigned = True
-            if anyCorePointsRemainingUnassigned == False:
-                pass
-
-    def train2(self,data):
-        """ Train model based on data """
-
         corePoints = [] # the index of all core points
         nonCorePoints = [] # the index of all non-core points
-        outliers = [] # the index of all points with no neighbors
 
-        data["cluster"] = -1 # setting the default cluster of every point to an "unassigned" value
+        assignmentData = data.copy()
+        assignmentData["cluster"] = -1 # setting the default cluster of every point to an "unassigned" value
 
-        for pt in data:
+        for pt in data.index:
+            #print(pt)
             # count points in radius from pt
             closePts = 0
-            for pt2 in data:
+            for pt2 in data.index[pt:]:
+                #print(pt2)
                 if pt == pt2:
                     continue
-                dis = dist(pt,pt2)
+                dis = dist(data.iloc[pt],data.iloc[pt2])
                 if dis <= self.epsilon:
                     closePts += 1
             if closePts >= self.minPts:
-                corePoints.append(pt.name)
+                corePoints.append(pt)
             elif closePts >0:
-                nonCorePoints.append(pt.name)
-            else:
-                outliers.append(pt.name)
+                nonCorePoints.append(pt)
         
+        #print(corePoints)
+
         # assigning the core points to clusters 
         # the first cluster isn't random because I don't see a value in it being random.
         # to change it to use a random, change the function below to get a list of every unassigned core point then return a random value from that
         cluster=0
-        pt = findFirstUnassigned(data[corePoints])
+        pt = self.findFirstUnassigned(assignmentData.iloc[corePoints])
         while pt!=None:
 
             # List of every point added to the cluster to make sure every core point around them gets added as well
             currentCluster = [pt]  # list init
-            data[pt]["cluster"] = cluster  
+            assignmentData["cluster"][pt] = cluster  
             currentClusterIndex=0  # current place in the cluster
 
             # loop until every point that has been added has been used
             while currentClusterIndex<len(currentCluster):
                 for pt2Index in corePoints:
-                    if dist(data[pt],data[pt2Index])<=self.epsilon:
+                    if dist(data.iloc[pt],data.iloc[pt2Index])<=self.epsilon:
                         # checks if no cluster has been assigned to the point
-                        if data[pt2Index]["cluster"] == -1:
+                        if assignmentData["cluster"][pt2Index] == -1:
                             currentCluster.append(pt2Index)  #adds it to the list
-                            data[pt2Index]["cluster"] = cluster
+                            assignmentData["cluster"][pt2Index] = cluster
                 # itterates to the next point in the cluster
                 currentClusterIndex += 1
                 # error check
@@ -219,8 +180,9 @@ class DBSCAN:
                 else:
                     break
             # updates to the next cluster name and resets the starting point
+            #print(currentCluster)
             cluster+=1
-            pt = findFirstUnassigned(data[corePoints])
+            pt = self.findFirstUnassigned(assignmentData.iloc[corePoints])
         
         # assigning the edge points to clusters
         for pt in nonCorePoints:
@@ -228,43 +190,37 @@ class DBSCAN:
             # in the case of a tie it's up to whatever the max function makes it
             clusters = {}
             for corePtIndex in corePoints:
-                if dist(data[pt],data[corePtIndex]) <= self.epsilon:
+                if dist(data.iloc[pt],data.iloc[corePtIndex]) <= self.epsilon:
                     try:
-                        clusters[data[corePtIndex]["cluster"]]+=1
-                    except e:
-                        clusters[data[corePtIndex]["cluster"]] = 1
+                        clusters[assignmentData["cluster"][corePtIndex]]+=1
+                    except:
+                        clusters[assignmentData["cluster"][corePtIndex]] = 1
             # sets the cluster to the max value 
             # !!potential for bugs here!!
-            data[pt]["cluster"] = max(clusters,key=clusters.get)
+            if(clusters!={}):
+                assignmentData["cluster"][pt] = max(clusters,key=clusters.get)
 
-            
-            
-
-
-    def findFirstUnassigned(self, data):
-        for dat in data:
-            if dat["cluster"]==-1:
-                return dat.name  # return the index of the first instance of a point without a cluster assignment
-        return None
+        self.model = assignmentData.copy()
 
 def kmeans(x, k):
     # Use it like this?
     km = KMeans(k)
-    km.train(x[x.columns[:-1]])
+    km.train(x)
     print(km.means)
-    # can print out km.means to see the fit means
-    # can call km.classify([1,2,3,4]) to get cluster index
-    
-    #The function should return a list the length of x that contains
-    # the cluster number (1 - k) for the corresponding x point
-    # TODO determine return value
+
+def dbScan(data,epsilon,minPts):
+    dbscan = DBSCAN(epsilon,minPts)
+    dbscan.train(data.iloc[:500])
+    #print(dbscan.model['cluster'].unique())
+    classif = dbscan.classify([1,1])
+    print(classif)  
 
 def main():
     path=""
     infile="clustering_dataset_01.csv"
     df = pd.read_csv(path+infile,header=None)
-
-    kmeans(df,5)
+    #kmeans(df[df.columns[:-1]],5)
+    dbScan(df[df.columns[:-1]][:500],1,3)
 
 if __name__=="__main__":
     main()

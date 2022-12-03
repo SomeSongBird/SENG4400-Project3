@@ -223,16 +223,23 @@ def kmeans(x, k):
     # Use it like this?
     km = KMeans(k)
     km.train(x)
+    classifi = []
+    for point in x.index:
+        classifi.append(km.classify(x.iloc[point]))
+    return classifi
       
 def dbScan(data,epsilon,minPts):
     dbscan = DBSCAN(epsilon,minPts)
-    dbscan.train(data.iloc[:500])
+    dbscan.train(data)
+    fix,ax = plt.subplots()
+    ax.scatter(dbscan.model[dbscan.modelk[0]],dbscan.model[dbscan.modelk[1]],c=dbscan.model['cluster'])
+    plt.show()
       
 def testing():
     path=""
     infile="clustering_dataset_01.csv"
     df = pd.read_csv(path+infile,header=None)
-    #kmeans(df[df.columns[:-1]],5)
+    print(kmeans(df[df.columns[:-1]],5))
     dbScan(df[df.columns[:-1]],1,3)
 
 def evaluation_visualization():
@@ -244,20 +251,20 @@ def evaluation_visualization():
         df = pd.read_csv(fi,header=None)
         relevent_data = df[df.columns[:-1]]
 
-        evaluate_kmeans(relevent_data,dataset_name)
+        evaluate_kmeans(relevent_data,30,dataset_name)
         evaluate_DBSCAN(relevent_data,dataset_name)
 
-def evaluate_kmeans(dataframe,dataset_name):
+def evaluate_kmeans(dataframe,max_k,dataset_name):
     print("---Evaluating dataset"+str(dataset_name)+"using Kmeans---")
     entropies = []
-    for k in range(1,11):
-        print(k)
+    for k in range(1,max_k+1):
+        #print(k)
         km = KMeans(k)
         km.train(dataframe)
         entropies.append(km.entropy(dataframe))
     
     fig,ax = plt.subplots()
-    ax.plot(range(10),entropies)
+    ax.plot(range(1,max_k+1),entropies)
     
     #plt.show()
     plt.savefig("k_means_entropy_fig_"+str(dataset_name)+".png")

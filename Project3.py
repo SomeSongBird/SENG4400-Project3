@@ -3,6 +3,12 @@ import pandas as pd
 import random
 import time
 
+import matplotlib.pyplot as plt
+
+# I dont want to deal with the pandas warnings, it works, the code isn't used for anything important (you're a fool if you do so), the warnings are turned off
+import warnings
+warnings.filterwarnings("ignore")
+
 # Building block functions:
     
 def deepcopy(clist):
@@ -93,6 +99,12 @@ class KMeans:
                 clusters = deepcopy(new_clusters)
                 new_clusters = [[] for ind in range(self.k)]
         
+    def entropy(self,data):
+        total_entropy = 0
+        for index in range(len(data.index)):
+            mean = self.classify(data.iloc[index])
+            total_entropy+=dist(self.means[mean],data.iloc[index])
+        return total_entropy
 
 class DBSCAN:
     """ Perform DBSCAN clustering """
@@ -145,12 +157,13 @@ class DBSCAN:
                 dis = dist(data.iloc[pt],data.iloc[pt2])
                 if dis <= self.epsilon:
                     closePts += 1
-            if closePts >= self.minPts:
-                corePoints.append(pt)
-            elif closePts >0:
+                    if closePts >= self.minPts: # no point in continuing through the data if it's already classified as a core point
+                        corePoints.append(pt)
+                        break
+            if closePts >0:
                 nonCorePoints.append(pt)
         
-        #print(corePoints)
+        print("assigned core points")
 
         # assigning the core points to clusters 
         # the first cluster isn't random because I don't see a value in it being random.
@@ -184,6 +197,8 @@ class DBSCAN:
             cluster+=1
             pt = self.findFirstUnassigned(assignmentData.iloc[corePoints])
         
+        print("core clustering")
+
         # assigning the edge points to clusters
         for pt in nonCorePoints:
             # in case of multiple (but not more than min) core points being close to the edge point
@@ -200,27 +215,79 @@ class DBSCAN:
             if(clusters!={}):
                 assignmentData["cluster"][pt] = max(clusters,key=clusters.get)
 
-        self.model = assignmentData.copy()
+        print("non-core clustering")
+        self.model = assignmentData.copy().where(assignmentData['cluster']!=-1).dropna() # store the clusters and ignore all data not assigned a cluster
+        #print(self.model['cluster'].unique())
 
 def kmeans(x, k):
     # Use it like this?
     km = KMeans(k)
     km.train(x)
-    print(km.means)
-
+      
 def dbScan(data,epsilon,minPts):
     dbscan = DBSCAN(epsilon,minPts)
     dbscan.train(data.iloc[:500])
-    #print(dbscan.model['cluster'].unique())
-    classif = dbscan.classify([1,1])
-    print(classif)  
-
-def main():
+      
+def testing():
     path=""
     infile="clustering_dataset_01.csv"
     df = pd.read_csv(path+infile,header=None)
     #kmeans(df[df.columns[:-1]],5)
-    dbScan(df[df.columns[:-1]][:500],1,3)
+    dbScan(df[df.columns[:-1]],1,3)
+
+def evaluation_visualization():
+    files = ["clustering_dataset_01.csv","clustering_dataset_02.csv","clustering_dataset_03.csv"]
+
+    for fi in files:
+        dataset_name = fi[:-4].split("_")[2] # get just the number from the filename
+
+        df = pd.read_csv(fi,header=None)
+        relevent_data = df[df.columns[:-1]]
+
+        #evaluate_kmeans(relevent_data,dataset_name)
+        evaluate_DBSCAN(relevent_data,dataset_name)
+        return
+
+def evaluate_kmeans(dataframe,dataset_name):
+    print("---Evaluating dataset"+str(dataset_name)+"using Kmeans---")
+    entropies = []
+    for k in range(1,11):
+        print(k)
+        km = KMeans(k)
+        km.train(dataframe)
+        entropies.append(km.entropy(dataframe))
+    
+    fig,ax = plt.subplots()
+    ax.plot(range(10),entropies)
+    
+    #plt.show()
+    plt.savefig("k_means_entropy_fig_"+str(dataset_name)+".png")
+    
+def evaluate_DBSCAN(dataframe,dataset_name):
+    print("---Evaluating dataset: "+str(dataset_name)+" using DBSCAN---")
+    fig,ax = plt.subplots(nrows=3,ncols=3)
+    fig.figsize = [12,12]
+    epsilons = [1,2,3]
+    min_pts = [2,3,4]
+    for epsilon in range(3):
+        print(epsilons[epsilon])
+        for minPts in range(3):
+            print(min_pts[minPts])
+            dbscan = DBSCAN(epsilons[epsilon],min_pts[minPts])
+            dbscan.train(dataframe)
+
+            #plotting
+            current_plot = ax[epsilon][minPts]
+            current_plot.set_title = "Epsilon = "+str(epsilons[epsilon])+"\nMin points = "+str(min_pts[minPts])
+            
+            color = dbscan.model['cluster']
+            x = dbscan.model[dbscan.model.columns[0]]
+            y = dbscan.model[dbscan.model.columns[1]]
+            current_plot.scatter(x,y,c=color)
+            
+    plt.savefig("DBScan_"+str(dataset_name)+".png")
 
 if __name__=="__main__":
-    main()
+    #testing()
+
+    evaluation_visualization()

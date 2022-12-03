@@ -244,9 +244,8 @@ def evaluation_visualization():
         df = pd.read_csv(fi,header=None)
         relevent_data = df[df.columns[:-1]]
 
-        #evaluate_kmeans(relevent_data,dataset_name)
+        evaluate_kmeans(relevent_data,dataset_name)
         evaluate_DBSCAN(relevent_data,dataset_name)
-        return
 
 def evaluate_kmeans(dataframe,dataset_name):
     print("---Evaluating dataset"+str(dataset_name)+"using Kmeans---")
@@ -288,6 +287,6 @@ def evaluate_DBSCAN(dataframe,dataset_name):
     plt.savefig("DBScan_"+str(dataset_name)+".png")
 
 if __name__=="__main__":
-    #testing()
+    testing()
 
     evaluation_visualization()

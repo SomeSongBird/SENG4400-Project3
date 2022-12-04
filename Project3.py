@@ -232,15 +232,18 @@ def dbScan(data,epsilon,minPts):
     dbscan = DBSCAN(epsilon,minPts)
     dbscan.train(data)
     fix,ax = plt.subplots()
-    ax.scatter(dbscan.model[dbscan.modelk[0]],dbscan.model[dbscan.modelk[1]],c=dbscan.model['cluster'])
+    ax.scatter(dbscan.model[dbscan.model.columns[0]],dbscan.model[dbscan.model.columns[1]],c=dbscan.model['cluster'])
     plt.show()
       
 def testing():
     path=""
     infile="clustering_dataset_01.csv"
     df = pd.read_csv(path+infile,header=None)
-    print(kmeans(df[df.columns[:-1]],5))
+    kmeans_out = kmeans(df[df.columns[:-1]],5)
+    print(kmeans_out)
     dbScan(df[df.columns[:-1]],1,3)
+
+
 
 def evaluation_visualization():
     files = ["clustering_dataset_01.csv","clustering_dataset_02.csv","clustering_dataset_03.csv"]
@@ -255,7 +258,7 @@ def evaluation_visualization():
         evaluate_DBSCAN(relevent_data,dataset_name)
 
 def evaluate_kmeans(dataframe,max_k,dataset_name):
-    print("---Evaluating dataset"+str(dataset_name)+"using Kmeans---")
+    print("---Evaluating dataset: "+str(dataset_name)+" using Kmeans---")
     entropies = []
     for k in range(1,max_k+1):
         #print(k)
